@@ -14,6 +14,9 @@ browser.
 
 <p align="center"><i>Front gate · PIN · [Has anyone been home?] · [Open / close gate]</i></p>
 
+**Blueprints:** [![Import the Latchkey web button blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdrgraff%2Fha-latchkey%2Fblob%2Fmain%2Fhomeassistant%2Fblueprints%2Fautomation%2Flatchkey%2Flatchkey_button.yaml) web button &nbsp;
+[![Import the Latchkey presence push blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdrgraff%2Fha-latchkey%2Fblob%2Fmain%2Fhomeassistant%2Fblueprints%2Fautomation%2Flatchkey%2Flatchkey_presence.yaml) presence push (optional)
+
 ## How it works
 
 ```
@@ -102,9 +105,12 @@ openssl rand -hex 8     # a page folder name (repeat for each page)
 
 1. Create an `input_boolean` as your kill switch, e.g.
    *Settings → Devices & services → Helpers → Toggle* "Latchkey access".
-2. Import the **Latchkey - web button** blueprint
-   (`homeassistant/blueprints/automation/latchkey/latchkey_button.yaml`) and
-   create an automation from it: your webhook id, the shared secret, the kill
+2. Import the **Latchkey - web button** blueprint and create an automation
+   from it:
+
+   [![Open your Home Assistant instance and show the blueprint import dialog with this blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdrgraff%2Fha-latchkey%2Fblob%2Fmain%2Fhomeassistant%2Fblueprints%2Fautomation%2Flatchkey%2Flatchkey_button.yaml)
+
+   Fill in your webhook id, the shared secret, the kill
    switch, and - **for now - an action that toggles a light**. Add
    notifications if you like; `{{ latchkey_page }}` holds the page name.
 3. Optional, for "Has anyone been home?":
@@ -114,7 +120,9 @@ openssl rand -hex 8     # a page folder name (repeat for each page)
      *Template entities* under *Developer tools → YAML*;
    - create an `input_datetime` helper (date **and** time) "Last home" and set
      it to roughly when someone was last home;
-   - import **Latchkey - presence push** and create an automation from it.
+   - import **Latchkey - presence push** and create an automation from it:
+
+     [![Open your Home Assistant instance and show the blueprint import dialog with this blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdrgraff%2Fha-latchkey%2Fblob%2Fmain%2Fhomeassistant%2Fblueprints%2Fautomation%2Flatchkey%2Flatchkey_presence.yaml)
 
 ### 4. Test with a light, then switch to the real thing
 
