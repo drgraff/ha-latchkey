@@ -1,0 +1,104 @@
+blueprint:
+  name: Latchkey - web button
+  description: >-
+    Runs your action when someone presses a Latchkey web page button with the
+    right PIN. The PIN is checked on your web server; this automation only
+    accepts requests carrying the shared secret, and only while the access
+    switch is on. Test it on a light before pointing it at anything real.
+
+
+    Inside your actions, `latchkey_page` holds the name of the page that was
+    used (from config.php), e.g. for the notification text.
+  domain: automation
+  source_url: https://github.com/drgraff/ha-latchkey/blob/main/homeassistant/blueprints/automation/latchkey/latchkey_button.yaml
+  input:
+    webhook_id:
+      name: Webhook ID
+      description: >-
+        Long and random (e.g. `openssl rand -hex 20`). Must match the end of
+        ha_webhook_url in the server's config.php.
+      selector:
+        text: {}
+    shared_secret:
+      name: Shared secret
+      description: Must match 'secret' in the server's config.php.
+      selector:
+        text:
+          type: password
+    access_switch:
+      name: Access switch
+      description: >-
+        An input_boolean that enables the web button - your kill switch. While
+        it's off, presses do nothing (and you can be notified).
+      selector:
+        entity:
+          domain: input_boolean
+    press_action:
+      name: Action when pressed
+      description: >-
+        What the button does, e.g. pulse a gate relay. Start with a light
+        toggle until you're happy it works.
+      selector:
+        action: {}
+    notify_action:
+      name: Notification when pressed (optional)
+      default: []
+      selector:
+        action: {}
+    blocked_action:
+      name: Notification when the access switch blocked a press (optional)
+      default: []
+      selector:
+        action: {}
+    lockout_action:
+      name: Notification when a page locks after wrong PINs (optional)
+      default: []
+      selector:
+        action: {}
+    cooldown:
+      name: Ignore repeat presses for
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 120
+          unit_of_measurement: s
+
+mode: single
+max_exceeded: silent
+
+triggers:
+  - trigger: webhook
+    webhook_id: !input webhook_id
+    allowed_methods:
+      - POST
+    local_only: false
+
+variables:
+  secret: !input shared_secret
+  access_switch: !input access_switch
+  cooldown: !input cooldown
+  latchkey_json: "{{ trigger.json if trigger.json is defined and trigger.json is mapping else {} }}"
+  latchkey_page: "{{ latchkey_json.get('page', '') }}"
+  latchkey_event: "{{ latchkey_json.get('event', '') }}"
+
+conditions:
+  - alias: Request carries the server's shared secret
+    condition: template
+    value_template: "{{ secret != '' and latchkey_json.get('secret', '') == secret }}"
+
+actions:
+  - choose:
+      - alias: A page locked after too many wrong PINs
+        conditions: "{{ latchkey_event == 'lockout' }}"
+        sequence: !input lockout_action
+      - alias: Access switched off
+        conditions:
+          - condition: template
+            value_template: "{{ is_state(access_switch, 'off') }}"
+        sequence: !input blocked_action
+    default:
+      - sequence: !input press_action
+      - sequence: !input notify_action
+      - delay:
+          seconds: "{{ cooldown | int(10) }}"

@@ -1,0 +1,79 @@
+blueprint:
+  name: Latchkey - presence push
+  description: >-
+    Keeps a "last home" time and pushes "someone home" plus that time to your
+    Latchkey server, so a page can answer "Has anyone been home?" after the
+    PIN. Pushes on every change, hourly and when HA starts; the page shows
+    "unknown" if the data gets old (e.g. your internet is down).
+
+
+    Needs the latchkey_status rest_command from
+    homeassistant/snippets/configuration.yaml in the Latchkey repository.
+  domain: automation
+  source_url: https://github.com/drgraff/ha-latchkey/blob/main/homeassistant/blueprints/automation/latchkey/latchkey_presence.yaml
+  input:
+    presence_entity:
+      name: Someone-home entity
+      description: >-
+        Counts as home when its state is 'on' or 'home', or a number above 0.
+        For example a template binary_sensor combining people and a guest-mode
+        switch (see the snippets), a group of person entities, or zone.home.
+      selector:
+        entity: {}
+    last_home_helper:
+      name: Last-home helper
+      description: >-
+        An input_datetime with date and time. Set it once to roughly when
+        someone was last home; this keeps it up to date from then on.
+      selector:
+        entity:
+          domain: input_datetime
+    rest_command_name:
+      name: rest_command name
+      default: latchkey_status
+      selector:
+        text: {}
+
+mode: queued
+
+triggers:
+  - trigger: state
+    entity_id: !input presence_entity
+    to: ~
+    id: change
+  - trigger: time_pattern
+    minutes: 7
+    id: hourly
+  - trigger: homeassistant
+    event: start
+    id: start
+
+variables:
+  presence_entity: !input presence_entity
+  last_home_helper: !input last_home_helper
+  rest_command_name: !input rest_command_name
+  is_home: >-
+    {% set s = states(presence_entity) %}
+    {{ s in ['on', 'home'] or (s | int(0)) > 0 }}
+  was_home: >-
+    {% if trigger.id == 'change' and trigger.from_state is not none %}
+      {% set s = trigger.from_state.state %}
+      {{ s in ['on', 'home'] or (s | int(0)) > 0 }}
+    {% else %}false{% endif %}
+
+actions:
+  - alias: Record "last home" while someone is home, and at the moment the house empties
+    if:
+      - condition: template
+        value_template: "{{ is_home or was_home }}"
+    then:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: "{{ last_home_helper }}"
+        data:
+          timestamp: "{{ now().timestamp() }}"
+  - action: "rest_command.{{ rest_command_name }}"
+    continue_on_error: true
+    data:
+      someone_home: "{{ is_home }}"
+      last_home: "{{ as_timestamp(states(last_home_helper), 0) | int }}"

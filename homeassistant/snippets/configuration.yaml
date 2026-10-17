@@ -1,0 +1,25 @@
+# Latchkey - add these to your Home Assistant configuration.yaml.
+# Only needed if a page shows "Has anyone been home?" (show_status => true).
+
+rest_command:
+  # Pushes presence to your Latchkey server's status.php.
+  # Reload after adding: Developer tools > YAML > REST commands.
+  latchkey_status:
+    url: !secret latchkey_status_url
+    method: post
+    headers:
+      X-Latchkey-Secret: !secret latchkey_secret
+    content_type: application/json
+    payload: '{"someone_home": {{ someone_home | tojson }}, "last_home": {{ last_home | int(0) }}}'
+    timeout: 15
+
+template:
+  # Optional: a "someone home" sensor for the presence blueprint. Adjust the
+  # people / guest switch to suit. Reload: Developer tools > YAML > Template entities.
+  - binary_sensor:
+      - name: Someone home
+        unique_id: latchkey_someone_home
+        device_class: presence
+        state: >-
+          {{ is_state('person.alex', 'home') or is_state('person.sam', 'home')
+             or is_state('input_boolean.guest_mode', 'on') }}
